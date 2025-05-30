@@ -5,14 +5,62 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require('@google/generative-ai');
+const axios = require('axios');
 
 const app = express();
 const port = process.env.PORT || 3000;
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:8000';
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: true,
+    credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Authentication middleware
+const verifyAuth = async (req, res, next) => {
+    try {
+        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
+
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                error: "Unauthorized request - No token provided"
+            });
+        }
+
+        // Verify token with auth service
+        try {
+            const response = await axios.get(`${AUTH_SERVICE_URL}/api/v1/users/verify-token`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            if (response.data.success) {
+                req.user = response.data.data; // Store user data in request
+                next();
+            } else {
+                return res.status(401).json({
+                    success: false,
+                    error: "Invalid token"
+                });
+            }
+        } catch (error) {
+            return res.status(401).json({
+                success: false,
+                error: "Token verification failed"
+            });
+        }
+    } catch (error) {
+        return res.status(401).json({
+            success: false,
+            error: "Authentication failed"
+        });
+    }
+};
 
 // Configure Google Generative AI
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -110,7 +158,7 @@ function fileToGenerativePart(filePath, mimeType) {
 }
 
 // Text-only chat endpoint
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', verifyAuth, async (req, res) => {
     try {
         const { message } = req.body;
 
@@ -161,7 +209,7 @@ app.post('/api/chat', async (req, res) => {
 });
 
 // Image and text chat endpoint
-app.post('/api/chat-with-image', upload.single('image'), async (req, res) => {
+app.post('/api/chat-with-image', verifyAuth, upload.single('image'), async (req, res) => {
     const userText = req.body.message;
     const imageFile = req.file;
 
