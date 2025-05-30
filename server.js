@@ -23,6 +23,24 @@ if (!API_KEY) {
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 
+// Helper function to check if the message is health-related
+async function isHealthRelated(message) {
+    try {
+        // Ask Gemini to determine if the message is health-related
+        const result = await model.generateContent({
+            contents: [{
+                role: "user",
+                parts: [{ text: `Determine if this message is related to healthcare, medicine, wellness, or health. Only respond with 'true' or 'false': "${message}"` }]
+            }],
+        });
+        const response = result.response.text().toLowerCase().trim();
+        return response === 'true';
+    } catch (error) {
+        console.error('Error checking health relevance:', error);
+        return false;
+    }
+}
+
 // Initialize Gemini model with safety settings
 const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
@@ -103,6 +121,15 @@ app.post('/api/chat', async (req, res) => {
             });
         }
 
+        // Check if the message is health-related
+        const healthRelated = await isHealthRelated(message);
+        if (!healthRelated) {
+            return res.status(400).json({
+                success: false,
+                error: "I am designed to assist with health-related queries only. Please ask questions about health, medicine, wellness, or medical topics."
+            });
+        }
+
         const result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: message }] }],
         });
@@ -143,6 +170,21 @@ app.post('/api/chat-with-image', upload.single('image'), async (req, res) => {
             success: false,
             error: 'Please provide either text or an image.'
         });
+    }
+
+    // Check if the message is health-related when text is provided
+    if (userText) {
+        const healthRelated = await isHealthRelated(userText);
+        if (!healthRelated) {
+            // Clean up the temporary file if exists
+            if (imageFile && fs.existsSync(imageFile.path)) {
+                fs.unlinkSync(imageFile.path);
+            }
+            return res.status(400).json({
+                success: false,
+                error: "I am designed to assist with health-related queries only. Please ask questions about health, medicine, wellness, or medical topics."
+            });
+        }
     }
 
     let parts = [];
