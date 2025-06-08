@@ -9,13 +9,9 @@ const {
   HarmCategory,
   HarmBlockThreshold,
 } = require("@google/generative-ai");
-const axios = require("axios");
 
 const app = express();
 const port = process.env.PORT || 3000;
-const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL;
-
-// const AUTH_SERVICE_URL = "http://localhost:8000"; // Replace with your auth service URL
 
 // Middleware
 app.use(
@@ -27,53 +23,9 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Authentication middleware
+// Simple middleware for future auth implementation if needed
 const verifyAuth = async (req, res, next) => {
-  try {
-    const token =
-      req.cookies?.accessToken ||
-      req.header("Authorization")?.replace("Bearer ", "");
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        error: "Unauthorized request - No token provided",
-      });
-    }
-
-    // Verify token with auth service
-    try {
-      const response = await axios.get(
-        `${AUTH_SERVICE_URL}/api/v1/users/verify-token`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.data.success) {
-        req.user = response.data.data; // Store user data in request
-        next();
-      } else {
-        return res.status(401).json({
-          success: false,
-          error: "Invalid token",
-        });
-      }
-    } catch (error) {
-      return res.status(401).json({
-        success: false,
-        error: "verification failed",
-        details: error.message,
-      });
-    }
-  } catch (error) {
-    return res.status(401).json({
-      success: false,
-      error: "Authentication failed",
-    });
-  }
+  next();
 };
 
 // Configure Google Generative AI
@@ -203,17 +155,39 @@ app.post("/api/chat", verifyAuth, async (req, res) => {
     }
 
     const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: message }] }],
+      contents: [{ 
+        role: "user", 
+        parts: [{ 
+          text: `Please provide a response to this health-related query in the following format:
+          - Each main point should be a separate, complete sentence
+          - If there are related subpoints, include them in the same sentence using appropriate connecting words (and, additionally, moreover, including, such as, etc.)
+          - Do not use bullet points, markdown, or special formatting
+          - Each point should be on a new line
+          - Keep the points concise but informative
+          Query: ${message}` 
+        }] 
+      }],
     });
 
     const response = result.response;
     const text = response.text();
 
-    // Structure the response
+    // Process and clean up the response
     const points = text
       .split("\n")
       .filter((line) => line.trim())
-      .map((point) => point.trim());
+      .map((point) => {
+        // Remove markdown formatting and clean up the text
+        return point
+          .replace(/\*\*/g, '') // Remove bold
+          .replace(/\*/g, '')   // Remove italics
+          .replace(/^[-•*]\s*/, '') // Remove bullet points
+          .replace(/^#+\s*/, '') // Remove headers
+          .replace(/\s+/g, ' ')  // Normalize spaces
+          .trim();
+      })
+      .filter(point => point && !point.match(/^[:#\-=]/)) // Remove separator lines and empty points
+      .filter(point => point.length > 10); // Remove very short lines that might be headers or incomplete points
 
     res.json({
       success: true,
