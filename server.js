@@ -155,18 +155,22 @@ app.post("/api/chat", verifyAuth, async (req, res) => {
     }
 
     const result = await model.generateContent({
-      contents: [{ 
-        role: "user", 
-        parts: [{ 
-          text: `Please provide a response to this health-related query in the following format:
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `Please provide a response to this health-related query in the following format:
           - Each main point should be a separate, complete sentence
           - If there are related subpoints, include them in the same sentence using appropriate connecting words (and, additionally, moreover, including, such as, etc.)
           - Do not use bullet points, markdown, or special formatting
           - Each point should be on a new line
           - Keep the points concise but informative
-          Query: ${message}` 
-        }] 
-      }],
+          Query: ${message}`,
+            },
+          ],
+        },
+      ],
     });
 
     const response = result.response;
@@ -179,15 +183,15 @@ app.post("/api/chat", verifyAuth, async (req, res) => {
       .map((point) => {
         // Remove markdown formatting and clean up the text
         return point
-          .replace(/\*\*/g, '') // Remove bold
-          .replace(/\*/g, '')   // Remove italics
-          .replace(/^[-•*]\s*/, '') // Remove bullet points
-          .replace(/^#+\s*/, '') // Remove headers
-          .replace(/\s+/g, ' ')  // Normalize spaces
+          .replace(/\*\*/g, "") // Remove bold
+          .replace(/\*/g, "") // Remove italics
+          .replace(/^[-•*]\s*/, "") // Remove bullet points
+          .replace(/^#+\s*/, "") // Remove headers
+          .replace(/\s+/g, " ") // Normalize spaces
           .trim();
       })
-      .filter(point => point && !point.match(/^[:#\-=]/)) // Remove separator lines and empty points
-      .filter(point => point.length > 10); // Remove very short lines that might be headers or incomplete points
+      .filter((point) => point && !point.match(/^[:#\-=]/)) // Remove separator lines and empty points
+      .filter((point) => point.length > 10); // Remove very short lines that might be headers or incomplete points
 
     res.json({
       success: true,
@@ -264,6 +268,27 @@ app.post(
     }
 
     try {
+      // Add the formatting instruction to the user's message if it exists
+      if (userText) {
+        parts[0].text = `Please provide a response to this health-related query in the following format:
+          - Each main point should be a separate, complete sentence
+          - If there are related subpoints, include them in the same sentence using appropriate connecting words (and, additionally, moreover, including, such as, etc.)
+          - Do not use bullet points, markdown, or special formatting
+          - Each point should be on a new line
+          - Keep the points concise but informative
+          Query: ${userText}`;
+      } else {
+        // If only image is provided, add instruction for image analysis
+        parts.unshift({
+          text: `Please analyze this image and provide observations in the following format:
+          - Each main point should be a separate, complete sentence
+          - If there are related details, include them in the same sentence using appropriate connecting words
+          - Do not use bullet points, markdown, or special formatting
+          - Each point should be on a new line
+          - Keep the points concise but informative`,
+        });
+      }
+
       const result = await model.generateContent({
         contents: [{ role: "user", parts: parts }],
       });
@@ -271,11 +296,22 @@ app.post(
       const response = result.response;
       const text = response.text();
 
-      // Structure the response
+      // Process and clean up the response
       const points = text
         .split("\n")
         .filter((line) => line.trim())
-        .map((point) => point.trim());
+        .map((point) => {
+          // Remove markdown formatting and clean up the text
+          return point
+            .replace(/\*\*/g, "") // Remove bold
+            .replace(/\*/g, "") // Remove italics
+            .replace(/^[-•*]\s*/, "") // Remove bullet points
+            .replace(/^#+\s*/, "") // Remove headers
+            .replace(/\s+/g, " ") // Normalize spaces
+            .trim();
+        })
+        .filter((point) => point && !point.match(/^[:#\-=]/)) // Remove separator lines and empty points
+        .filter((point) => point.length > 10); // Remove very short lines that might be headers or incomplete points
 
       res.json({
         success: true,
