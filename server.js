@@ -31,6 +31,12 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Logging middleware to log every incoming API request
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 // Simple middleware for future auth implementation if needed
 const verifyAuth = async (req, res, next) => {
   next();
@@ -142,6 +148,7 @@ function fileToGenerativePart(filePath, mimeType) {
 
 // Text-only chat endpoint
 app.post("/api/chat", verifyAuth, async (req, res) => {
+  console.log("Processing POST /api/chat");
   try {
     const { message } = req.body;
 
@@ -224,6 +231,7 @@ app.post(
   verifyAuth,
   upload.single("image"),
   async (req, res) => {
+    console.log("Processing POST /api/chat-with-image");
     const userText = req.body.message;
     const imageFile = req.file;
 
