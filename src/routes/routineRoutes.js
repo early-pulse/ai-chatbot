@@ -47,6 +47,7 @@ const routineQuestions = [
 
 // Get questions endpoint
 router.get("/questions", (req, res) => {
+  console.log("GET /api/v1/routine/questions called");
   res.json({
     success: true,
     data: {
@@ -57,6 +58,7 @@ router.get("/questions", (req, res) => {
 
 // Get current routine endpoint
 router.get("/current/:userId", async (req, res) => {
+  console.log(`GET /api/v1/routine/current/${req.params.userId} called`);
   try {
     const { userId } = req.params;
     const routine = await Routine.findOne({ userId }).sort({ updatedAt: -1 });
@@ -88,6 +90,7 @@ router.get("/current/:userId", async (req, res) => {
 
 // Generate routine endpoint
 router.post("/generate", async (req, res) => {
+  console.log("POST /api/v1/routine/generate called with body:", req.body);
   try {
     const { answers, userId } = req.body;
 
