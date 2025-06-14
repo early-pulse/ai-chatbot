@@ -57,19 +57,23 @@ router.get("/questions", (req, res) => {
 });
 
 // Get current routine endpoint
-router.get("/current/:userId", async (req, res) => {
-  console.log(`GET /api/v1/routine/current/${req.params.userId} called`);
+router.get("/current", async (req, res) => {
+  console.log("GET /api/v1/routine/current called with body:", req.body);
   try {
-    const { userId } = req.params;
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: "User ID is required in the request body",
+      });
+    }
     const routine = await Routine.findOne({ userId }).sort({ updatedAt: -1 });
-
     if (!routine) {
       return res.status(404).json({
         success: false,
         error: "No routine found for this user",
       });
     }
-
     res.json({
       success: true,
       data: {
