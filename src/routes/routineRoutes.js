@@ -58,7 +58,7 @@ router.get("/questions", (req, res) => {
 
 // Get current routine endpoint
 router.post("/current", async (req, res) => {
-  console.log("GET /api/v1/routine/current called with body:", req.body);
+  console.log("POST /api/v1/routine/current called with body:", req.body);
   try {
     const { userId } = req.body;
     if (!userId) {
