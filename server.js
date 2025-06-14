@@ -4,14 +4,22 @@ const cors = require("cors");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
+const mongoose = require("mongoose");
 const {
   GoogleGenerativeAI,
   HarmCategory,
   HarmBlockThreshold,
 } = require("@google/generative-ai");
+const axios = require("axios");
+const routineRoutes = require("./src/routes/routineRoutes");
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
 // Middleware
 app.use(
@@ -336,6 +344,9 @@ app.post(
     }
   }
 );
+
+// Add the routine routes
+app.use("/api/v1/routine", routineRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
