@@ -57,7 +57,7 @@ router.get("/questions", (req, res) => {
 });
 
 // Get current routine endpoint
-router.get("/current", async (req, res) => {
+router.post("/current", async (req, res) => {
   console.log("GET /api/v1/routine/current called with body:", req.body);
   try {
     const { userId } = req.body;
@@ -169,11 +169,11 @@ router.post("/generate", async (req, res) => {
       // Find and update existing routine, or create new if doesn't exist
       const routineDoc = await Routine.findOneAndUpdate(
         { userId },
-        { 
+        {
           routine: routineTasks,
           updatedAt: new Date(),
         },
-        { 
+        {
           new: true, // Return the updated document
           upsert: true, // Create if doesn't exist
         }
