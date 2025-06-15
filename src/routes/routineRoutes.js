@@ -58,7 +58,7 @@ router.get("/questions", (req, res) => {
 
 // Get current routine endpoint
 router.post("/current", async (req, res) => {
-  console.log("POST /api/v1/routine/current called with body:", req.body);
+  console.log("POST /api/v1/routine/current called");
   try {
     const { userId } = req.body;
     if (!userId) {
@@ -94,7 +94,7 @@ router.post("/current", async (req, res) => {
 
 // Generate routine endpoint
 router.post("/generate", async (req, res) => {
-  console.log("POST /api/v1/routine/generate called with body:", req.body);
+  console.log("POST /api/v1/routine/generate called");
   try {
     const { answers, userId } = req.body;
 
@@ -144,7 +144,7 @@ router.post("/generate", async (req, res) => {
       raw = raw.replace(/\s*```$/, "");
     }
 
-    console.log("Raw response from AI model:", raw);
+    // console.log("Raw response from AI model:", raw);
     // Parse the JSON response
     let routineTasks;
     try {
